@@ -705,6 +705,10 @@ bool TypeChecking::check(NameExpression* nameExpression) {
                     break;
                 }
             }
+            if(fd->isProtected()){
+                Error(E_DEFAULT, NULL, "[DEV NOTE - REPLACE] protected static variable cannot be referenced from a class that does not inherit it.");
+                return false;
+            }
         }
 
         if ((static_context_only || restrict_this) && ct && !ct->getAField(name->getNameId()->getIdAsString())->getField()->isStatic()) {
