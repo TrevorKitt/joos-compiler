@@ -6,55 +6,6 @@
 #include <stack>
 #include <cassert>
 
-/************************************************************************************
-
-    THIS CODE IS UNHOLY. DO NOT TRY TO READ IT, OR BELIEVE THAT IT WAS WRITTEN
-    WITH ANY GOOD CODING PRINCIPLES IN MIND. ALSO IF YOU WANT TO TRY FIGURING OUT
-    WHAT IS GOING ON. GOOD LUCK. YOU HAVE BEEN WARNED.
-
-                             ud$$$**$$$$$$$bc.                          
-                          u@**"        4$$$$$$$Nu                       
-                        J                ""#$$$$$$r                     
-                       @                       $$$$b                    
-                     .F                        ^*3$$$                   
-                    :% 4                         J$$$N                  
-                    $  :F                       :$$$$$                  
-                   4F  9                       J$$$$$$$                 
-                   4$   k             4$$$$bed$$$$$$$$$                 
-                   $$r  'F            $$$$$$$$$$$$$$$$$r                
-                   $$$   b.           $$$$$$$$$$$$$$$$$N                
-                   $$$$$k 3eeed$$b    $$$Euec."$$$$$$$$$                
-    .@$**N.        $$$$$" $$$$$$F'L $$$$$$$$$$$  $$$$$$$                
-    :$$L  'L       $$$$$ 4$$$$$$  * $$$$$$$$$$F  $$$$$$F         edNc   
-   @$$$$N  ^k      $$$$$  3$$$$*%   $F4$$$$$$$   $$$$$"        d"  z$N  
-   $$$$$$   ^k     '$$$"   #$$$F   .$  $$$$$c.u@$$$          J"  @$$$$r 
-   $$$$$$$b   *u    ^$L            $$  $$$$$$$$$$$$u@       $$  d$$$$$$ 
-    ^$$$$$$.    "NL   "N. z@*     $$$  $$$$$$$$$$$$$P      $P  d$$$$$$$ 
-       ^"*$$$$b   '*L   9$E      4$$$  d$$$$$$$$$$$"     d*   J$$$$$r   
-            ^$$$$u  '$.  $$$L     "#" d$$$$$$".@$$    .@$"  z$$$$*"     
-              ^$$$$. ^$N.3$$$       4u$$$$$$$ 4$$$  u$*" z$$$"          
-                '*$$$$$$$$ *$b      J$$$$$$$b u$$P $"  d$$P             
-                   #$$$$$$ 4$ 3*$"$*$ $"$'c@@$$$$ .u@$$$P               
-                     "$$$$  ""F~$ $uNr$$$^&J$$$$F $$$$#                 
-                       "$$    "$$$bd$.$W$$$$$$$$F $$"                   
-                         ?k         ?$$$$$$$$$$$F'*                     
-                          9$$bL     z$$$$$$$$$$$F                       
-                           $$$$    $$$$$$$$$$$$$                        
-                            '#$$c  '$$$$$$$$$"                          
-                             .@"#$$$$$$$$$$$$b                          
-                           z*      $$$$$$$$$$$$N.                       
-                         e"      z$$"  #$$$k  '*$$.                     
-                     .u*      u@$P"      '#$$c   "$$c                   
-              u@$*"""       d$$"            "$$$u  ^*$$b.               
-            :$F           J$P"                ^$$$c   '"$$$$$$bL        
-           d$$  ..      @$#                      #$$b         '#$       
-           9$$$$$$b   4$$                          ^$$k         '$      
-            "$$6""$b u$$                             '$    d$$$$$P      
-              '$F $$$$$"                              ^b  ^$$$$b$       
-               '$W$$$$"                                'b@$$$$"         
-                                                        ^$$$*  Gilo95'
-*/
-
 bool isPrimitive(std::string type) {
     return type == "int" || type == "short" || type == "byte" || type == "char" || type == "boolean" || type == "float" || type == "double";
 }
@@ -166,6 +117,7 @@ bool TypeChecking::check(FieldDecl* fieldDecl) {
               (lefths != righths &&
                !inheritsOrExtendsOrImplements(righths, lefths) &&
                fieldDecl->getInitializingExpression()->getExprType() != ET_NULL))) {
+            std::cout << lefths << ":" << righths << std::endl;
             Error(E_DEFAULT, NULL, "[DEV NOTE - REPLACE] Bad Field Decl Init - RIGHTHS type is not LEFTHS type.");
             return false;
         }
@@ -358,6 +310,7 @@ bool TypeChecking::check(MethodInvoke* methodInvoke) {
                     bool traceback_needed = !traceback.empty() || ambiguous_traceback_needed;
                     std::stack<Name*>* traceback_ptr = ambiguous_traceback_needed ? &ambiguousTraceback : &traceback;
                     while (!traceback_ptr->empty()) {
+                        std::cout << "searching: " << traceback_ptr->top()->getNameId()->getIdAsString() << " in: " << processing->getClassOrInterfaceName() << std::endl;
                         if (!temp_processing->getAField(traceback_ptr->top()->getNameId()->getIdAsString())) {
                             Error(E_DEFAULT, NULL, "[DEV NOTE - REPLACE] Field does not exist.");
                             return false;
@@ -394,8 +347,7 @@ bool TypeChecking::check(MethodInvoke* methodInvoke) {
                     }
                     ct = temp_processing;
                     ClassMethodTable* cmt = ct->getAClassMethod(static_cast<MethodNormalInvoke*>(methodInvoke)->methodInvocationMatchToSignature());
-                    ct = cmt->getDeclaringClass();
-                    cmt = ct->getAClassMethod(static_cast<MethodNormalInvoke*>(methodInvoke)->methodInvocationMatchToSignature());
+                    
                     if (!traceback_needed && !cmt->getClassMethod()->isStatic()) {
                         std::stringstream ss;
                         ss << "Non-static method '" << cmt->getClassMethod()->getMethodHeader()->methodSignatureAsString()
@@ -406,14 +358,6 @@ bool TypeChecking::check(MethodInvoke* methodInvoke) {
                         std::stringstream ss;
                         ss << "Static method '" << cmt->getClassMethod()->getMethodHeader()->methodSignatureAsString()
                            << "' cannot be invoked non-statically.";
-                        Error(E_TYPECHECKING, name->getNameId()->getToken(), ss.str());
-                        return false;
-                    } else if (cmt->getClassMethod()->isProtected() &&
-                               (processing->getPackageName() != ct->getPackageName() &&
-                                !inheritsOrExtendsOrImplements(processing->getCanonicalName(), ct->getCanonicalName()))) {
-                        std::stringstream ss;
-                        ss << "Protected method '" << cmt->getClassMethod()->getMethodHeader()->methodSignatureAsString()
-                           << "' cannot be invoked here. - mh1";
                         Error(E_TYPECHECKING, name->getNameId()->getToken(), ss.str());
                         return false;
                     }
@@ -440,25 +384,15 @@ bool TypeChecking::check(MethodInvoke* methodInvoke) {
                 assert(ct != NULL);
 
                 ClassMethodTable* cmt = ct->getAClassMethod(static_cast<MethodNormalInvoke*>(methodInvoke)->methodInvocationMatchToSignature());
-                ct = cmt->getDeclaringClass();
-                cmt = ct->getAClassMethod(static_cast<MethodNormalInvoke*>(methodInvoke)->methodInvocationMatchToSignature());
-                if (cmt->getClassMethod()->isStatic()) {
-                    std::stringstream ss;
-                    ss << "Static method '" << cmt->getClassMethod()->getMethodHeader()->methodSignatureAsString()
-                       << "' cannot be invoked non-statically.";
-                    Error(E_TYPECHECKING, name->getNameId()->getToken(), ss.str());
-                    return false;
-                } else if (cmt->getClassMethod()->isProtected() &&
-                           (processing->getPackageName() != ct->getPackageName() &&
-                            !inheritsOrExtendsOrImplements(processing->getCanonicalName(), ct->getCanonicalName()))) {
-                    std::stringstream ss;
-                    ss << "Protected method '" << cmt->getClassMethod()->getMethodHeader()->methodSignatureAsString()
-                       << "' cannot be invoked here. - mh3";
-                    Error(E_TYPECHECKING, name->getNameId()->getToken(), ss.str());
-                    return false;
+                if (!cmt->getClassMethod()->isStatic()) {
+                    return true;
                 }
 
-                return true;                
+                std::stringstream ss;
+                ss << "Static method '" << cmt->getClassMethod()->getMethodHeader()->methodSignatureAsString()
+                   << "' cannot be invoked non-statically.";
+                Error(E_TYPECHECKING, name->getNameId()->getToken(), ss.str());
+                return false;
             }
         } else {
             // Simple name
@@ -497,32 +431,10 @@ bool TypeChecking::check(NewClassCreation* newClassCreation) {
             ss << "Abstract class '" << cd->getClassId()->getIdAsString() << "' cannot be constructed.";
             Error(E_TYPECHECKING, newClassCreation->getClassName()->getNameId()->getToken(), ss.str());
             return false;
-        } else if (table->getAConstructor(newClassCreation->constructorInvocationMatchToSignature())->getConstructor()->isProtected()) {
-            if (table->getPackageName() != processing->getPackageName()) {
-                Error(E_DEFAULT, NULL, "[DEV NOTE - REPLACE] Constructor called is protected.");
-                return false;
-            }
         }
     }
 
-    return check(newClassCreation->getArgsToCreateClass());
-}
-
-bool TypeChecking::check(ArgumentsStar* argumentsStar) {
-    if (argumentsStar->isEpsilon()) {
-        return true;
-    }
-
-    return check(argumentsStar->getListOfArguments());
-}
-
-bool TypeChecking::check(Arguments* arguments) {
-    bool rest_of_arguements = true;
-    if (!arguments->lastArgument()) {
-        rest_of_arguements = check(arguments->getNextArgs());
-    }
-
-    return rest_of_arguements && check(arguments->getSelfArgumentExpr());
+    return true;
 }
 
 bool TypeChecking::check(ReturnStmt* returnStmt) {
@@ -613,8 +525,15 @@ bool TypeChecking::check(Expression* expression) {
         }
 
         return check(rightExpr) && check(leftExpr);
-    } else if(expression->isAssignName() || expression->isAssignField() || expression->isAssignArray()) {
-        return check(static_cast<Assignment*>(expression));
+    } else if(expression->isAssignName()) {
+        std::cout << "Assign name" << std::endl;
+        return (check(static_cast<AssignName*>(expression)->getNameToAssign()) && check(static_cast<Assignment*>(expression)));
+    } else if(expression->isAssignField()) {
+        std::cout << "Assign field" << std::endl;
+        return (check(static_cast<AssignField*>(expression)->getAssignedField()) && check(static_cast<Assignment*>(expression)));
+    } else if(expression->isAssignArray()) {
+        std::cout << "Assign array" << std::endl;
+        return (check(static_cast<AssignArray*>(expression)->getAssignedArray()) && check(static_cast<Assignment*>(expression)));
     } else if (expression->isInstanceOf()) {
         return check(static_cast<InstanceOf*>(expression));
     } else if (expression->isNameExpression()) {
@@ -634,94 +553,103 @@ bool TypeChecking::check(Expression* expression) {
 }
 
 bool TypeChecking::check(NameExpression* nameExpression) {
-    Name* name = nameExpression->getNameExpression();
+    if (static_context_only || restrict_this) {
+        //std::cout << "Static context only" << std::endl;
+        // If I can't find it as a field decl in the class, it MUST be a static reference
+        // and make sure it isn't an arguement
+        if (!isLocalOrArg(nameExpression->getNameExpression()) && nameExpression->getNameExpression()->isSimpleName() &&
+            processing->getAField(nameExpression->getNameExpression()->getFullName())) {
+            FieldDecl* fd = processing->getAField(nameExpression->getNameExpression()->getFullName())->getField();
 
-    if (!isLocalOrArg(name) && name->isSimpleName() &&
-        processing->getAField(name->getFullName())) {
-        FieldDecl* fd = processing->getAField(name->getFullName())->getField();
-
-        if ((static_context_only || restrict_this) && !fd->isStatic()) {
-            Error(E_DEFAULT, NULL, "[DEV NOTE - REPLACE] non-static variable cannot be referenced in a static context.");
+            if (!fd->isStatic()) {
+                Error(E_DEFAULT, NULL, "[DEV NOTE - REPLACE] non-static variable cannot be referenced in a static context.");
+                return false;
+            }
+        } else if (!isLocalOrArg(nameExpression->getNameExpression()) && nameExpression->getNameExpression()->isSimpleName() &&
+                   restrict_type_name_expressions) {
+            Error(E_DEFAULT, NULL, "[DEV NOTE - REPLACE] Illegal start type bracket type thing.");
             return false;
-        }
-    } else if (!isLocalOrArg(name) && name->isSimpleName() &&
-               restrict_type_name_expressions) {
-        Error(E_DEFAULT, NULL, "[DEV NOTE - REPLACE] Illegal start type bracket type thing.");
-        return false;
-    } else if (!name->isSimpleName()) {
-        Name* nextName = name->getNextName();
-        CompilationTable* ct = NULL;
-        std::string typeName = tryToGetTypename(nextName, processing);
+        } else if (!nameExpression->getNameExpression()->isSimpleName()) {
+            Name* nextName = nameExpression->getNameExpression()->getNextName();
+            CompilationTable* ct = NULL;
 
-        if (isLocalOrArg(nextName)) {
-            if (typeName == "" || isPrimitive(typeName) ||
-                (isArray(typeName) && name->getNameId()->getIdAsString() == "length")) {
-                // uh.. TODO
-                return true;
-            } else if (isArray(typeName)) {
-                typeName = "java.util.Arrays";
-            }
-            std::vector<CompilationTable*>& types = packages[getQualifierFromString(typeName)];
-            for (unsigned int i = 0; i < types.size(); i++) {
-                if (types[i]->getClassOrInterfaceName() == typeName.substr(typeName.find_last_of('.') + 1)) {
-                    ct = types[i];
-                    break;
+            if (isLocalOrArg(nextName)) {
+                std::string typeName = tryToGetTypename(nextName, processing);
+                if (typeName == "" || isPrimitive(typeName) ||
+                    (isArray(typeName) && nameExpression->getNameExpression()->getNameId()->getIdAsString() == "length")) {
+                    // uh.. TODO
+                    return true;
+                } else if (isArray(typeName)) {
+                    typeName = "java.util.Arrays";
                 }
-            }
-
-            FieldDecl* fd = ct->getAField(name->getNameId()->getIdAsString())->getDeclaringClass()->getAField(name->getNameId()->getIdAsString())->getField();
-            if ((static_context_only || restrict_this) && fd->isStatic()) {
-                Error(E_DEFAULT, NULL, "[DEV NOTE - REPLACE] Cannot reference static variable from this instance.");
-                return false;
-            } else if (fd->isProtected() && processing->getPackageName() != ct->getPackageName()) {
-                Error(E_DEFAULT, NULL, "[DEV NOTE - REPLACE] Field access to protected thing.");
-                return false;
-            }
-
-            return true;
-        } else if (processing->getPackageName() == nextName->getFullName()) {
-            ct = processing;
-        } else if (processing->checkTypePresenceFromSingleImport(nextName->getFullName())) {
-            ct = processing->checkTypePresenceFromSingleImport(nextName->getFullName());
-        } else if (processing->checkTypePresenceInPackage(nextName->getFullName())) {
-            ct = processing->checkTypePresenceInPackage(nextName->getFullName());
-        } else if (processing->checkTypePresenceFromImportOnDemand(nextName->getFullName(), nextName->getNameId()->getToken())) {
-            ct = processing->checkTypePresenceFromImportOnDemand(nextName->getFullName(), nextName->getNameId()->getToken());
-        } else {
-            if (restrict_type_name_expressions) {
-                std::vector<CompilationTable*>& types = packages[getQualifierFromString(name->getFullName())];
+                std::vector<CompilationTable*>& types = packages[getQualifierFromString(typeName)];
                 for (unsigned int i = 0; i < types.size(); i++) {
-                    if (types[i]->getCanonicalName() == name->getFullName()) {
-                        Error(E_DEFAULT, NULL, "[DEV NOTE - REPLACE] Illegal start type bracket type thing.");
-                        return false;
+                    if (types[i]->getClassOrInterfaceName() == typeName.substr(typeName.find_last_of('.') + 1)) {
+                        ct = types[i];
+                        break;
+                    }
+                }
+
+                FieldDecl* fd = ct->getAField(nameExpression->getNameExpression()->getNameId()->getIdAsString())->getField();
+                if (fd->isStatic()) {
+                    Error(E_DEFAULT, NULL, "[DEV NOTE - REPLACE] Cannot reference static variable from this instance.");
+                    return false;
+                }
+
+                return true;
+            } else if (processing->getPackageName() == nextName->getFullName()) {
+                ct = processing;
+            } else if (processing->checkTypePresenceFromSingleImport(nextName->getFullName())) {
+                ct = processing->checkTypePresenceFromSingleImport(nextName->getFullName());
+            } else if (processing->checkTypePresenceInPackage(nextName->getFullName())) {
+                ct = processing->checkTypePresenceInPackage(nextName->getFullName());
+            } else if (processing->checkTypePresenceFromImportOnDemand(nextName->getFullName(), nextName->getNameId()->getToken())) {
+                ct = processing->checkTypePresenceFromImportOnDemand(nextName->getFullName(), nextName->getNameId()->getToken());
+            } else {
+                if (restrict_type_name_expressions) {
+                    std::vector<CompilationTable*>& types = packages[getQualifierFromString(nameExpression->getNameExpression()->getFullName())];
+                    for (unsigned int i = 0; i < types.size(); i++) {
+                        if (types[i]->getCanonicalName() == nameExpression->getNameExpression()->getFullName()) {
+                            Error(E_DEFAULT, NULL, "[DEV NOTE - REPLACE] Illegal start type bracket type thing.");
+                            return false;
+                        }
+                    }
+                }
+
+                std::vector<CompilationTable*>& types = packages[getQualifierFromString(nextName->getFullName())];
+                for (unsigned int i = 0; i < types.size(); i++) {
+                    if (types[i]->getClassOrInterfaceName() == nextName->getFullName().substr(nextName->getFullName().find_last_of('.') + 1)) {
+                        ct = types[i];
+                        break;
                     }
                 }
             }
 
-            std::vector<CompilationTable*>& types = packages[getQualifierFromString(typeName)];
-            for (unsigned int i = 0; i < types.size(); i++) {
-                if (types[i]->getClassOrInterfaceName() == typeName.substr(typeName.find_last_of('.') + 1)) {
-                    ct = types[i];
-                    break;
-                }
-            }
-            if(fd->isProtected()){
-                Error(E_DEFAULT, NULL, "[DEV NOTE - REPLACE] protected static variable cannot be referenced from a class that does not inherit it.");
+            if (ct && !ct->getAField(nameExpression->getNameExpression()->getNameId()->getIdAsString())->getField()->isStatic()) {
+                Error(E_DEFAULT, NULL, "[DEV NOTE - REPLACE] non-static variable cannot be referenced in a static context.");
                 return false;
             }
         }
-
-        if ((static_context_only || restrict_this) && ct && !ct->getAField(name->getNameId()->getIdAsString())->getField()->isStatic()) {
-            Error(E_DEFAULT, NULL, "[DEV NOTE - REPLACE] non-static variable cannot be referenced in a static context.");
-            return false;
-        } else if (ct && ct->getAField(name->getNameId()->getIdAsString())->getField()->isProtected() &&
-                   (processing->getPackageName() != ct->getPackageName() &&
-                    !inheritsOrExtendsOrImplements(processing->getCanonicalName(), ct->getCanonicalName()))) {
-            Error(E_DEFAULT, NULL, "[DEV NOTE - REPLACE] Name expression, protected access bleh.");
-            return false;
-        }
     }
+    
+    /*if(nameExpression->getNameExpression()->isReferringToField())
+    {
+        FieldDecl* decl = nameExpression->getNameExpression()->getReferredField()->getField();
+        if(decl->isStatic() && decl->isProtected())
+        {
+            Error(E_DEFAULT, NULL, "[DEV NOTE - REPLACE] cannot access static protected field outside of the deining class and its subclasses - nameExpression");
+        }
+        
+    }*/
 
+    return true;
+}
+
+bool TypeChecking::check(Name* name){
+    /*if (processing->getAField(name))
+    {
+        
+    }*/
     return true;
 }
 
@@ -741,25 +669,83 @@ bool TypeChecking::check(InstanceOf* instanceOf) {
 }
 
 bool TypeChecking::check(Primary* primary) {
+    //std::cout << "Primary ho!!!!!!!!!!!!!!!!" << std::endl;
+    //std::cout << "Lexeme: " << primary->getLexeme() << std::endl;
+    /*if (primary->isReferringToClass()) {
+    std::cout << "class" << std::endl;
+    }else if (primary->isReferringToField()) {
+    std::cout << "field" << std::endl;
+    } else if (primary->isReferringToClassMethod()) {
+    std::cout << "class method" << std::endl;
+    } else if (primary->isReferringToInterfaceMethod()) {
+    std::cout << "interface method" << std::endl;
+    } else if (primary->isReferringToConstructor()) {
+    std::cout << "constructor" << std::endl;
+    } else if (primary->postponeLinking()) {
+    std::cout << "postpone" << std::endl;
+    } else if (primary->linkToPrimitiveLiteral()) {
+    std::cout << "primitive literal" << std::endl;
+    } else if (primary->linkToArray()) {
+    std::cout << "array" << std::endl;
+    } else if (primary->linkToArrayLength()) {
+    std::cout << "array length" << std::endl;
+    } else if (primary->linkToNull()) {
+    std::cout << "null" << std::endl;
+    } else if (primary->resolvedLinkButNoEntity()) {
+    std::cout << "resolved but no entity" << std::endl;
+    } else {
+    std::cout << "nothing" << std::endl;
+    } */
+   /* if(primary->isFieldAccess()) {
+        traverseAndLink((FieldAccess*) prim);
+    } else if(primary->isThis() || primary->isNumber() || primary->isTrueBoolean() || primary->isFalseBoolean()
+              || primary->isCharLiteral() || primary->isStringLiteral() || primary->isNull()) {
+        traverseAndLink((LiteralOrThis*) prim);
+    } else if(prim->isBracketedExpression()) {
+        traverseAndLink((BracketedExpression*) prim);
+        // linking has been resolved, but BracketedExpression doesn't really link to anywhere
+        // indicate this
+        prim->ResolveLinkButNoEntity();
+    } else if(prim->isNewClassCreation()) {
+        traverseAndLink((NewClassCreation*) prim);
+    } else if(prim->isNewPrimitiveArray() || prim->isNewReferenceArray()) {
+        traverseAndLink((PrimaryNewArray*) prim);
+    } else if(prim->isNormalMethodCall() || prim->isAccessedMethodCall()) {
+        traverseAndLink((MethodInvoke*) prim);
+    } else if(prim->isArrayAccessName() || prim->isArrayAccessPrimary()) {
+        traverseAndLink((ArrayAccess*) prim);
+    } else {
+        // the remaining is qualified this, which has already been resolved
+        // indicate this
+        prim->ResolveLinkButNoEntity();
+    }*/
     if (primary->isFieldAccess()) {
+    //std::cout << "field access" << std::endl;
         return check(static_cast<FieldAccess*>(primary));
     } else if(primary->isThis() || primary->isNumber() || primary->isTrueBoolean() || primary->isFalseBoolean()
               || primary->isCharLiteral() || primary->isStringLiteral() || primary->isNull()) {
+              //std::cout << "This stuff" << std::endl;
         return check(static_cast<LiteralOrThis*>(primary)); 
     } else if (primary->isBracketedExpression()) {
+    //std::cout << "bracketed expression" << std::endl;
         return check(static_cast<BracketedExpression*>(primary)->getExpressionInside());
     } else if (primary->isNewClassCreation()) {
+    //std::cout << "new class creation" << std::endl;
         return check(static_cast<NewClassCreation*>(primary));
     } else if (primary->isNormalMethodCall() || primary->isAccessedMethodCall()) {
+        //std::cout << "method calls" << std::endl;
         return check(static_cast<MethodInvoke*>(primary));
     } else if (primary->isQualifiedThis()) {
+    //std::cout << "is qualified this" << std::endl;
         return check(static_cast<QualifiedThis*>(primary));
     } else if (primary->isArrayAccessName() || primary->isArrayAccessPrimary()) {
+        //std::cout << "array access name" << std::endl;
         return check(static_cast<ArrayAccess*>(primary));
     } else if (primary->isNewPrimitiveArray() || primary->isNewReferenceArray()) {
+       // std::cout << "new primitive array" << std::endl;
         return check(static_cast<PrimaryNewArray*>(primary));
     }
-
+    std::cout << "No match" << std::endl;
     return true;
 }
 
@@ -806,9 +792,7 @@ bool TypeChecking::check(CastExpression* castExpression){
         }
         else
         {
-            if(!inheritsOrExtendsOrImplements(paramaterExpression->getExpressionTypeString(), castExpression->getExpressionTypeString()) &&
-               !inheritsOrExtendsOrImplements(castExpression->getExpressionTypeString(), paramaterExpression->getExpressionTypeString()) &&
-               paramaterExpression->getExprType() != ET_NULL)
+            if(!inheritsOrExtendsOrImplements(paramaterExpression->getExpressionTypeString(), castExpression->getExpressionTypeString()) && !inheritsOrExtendsOrImplements(castExpression->getExpressionTypeString(), paramaterExpression->getExpressionTypeString()))
             {
                 Error(E_DEFAULT, NULL, "[DEV NOTE - REPLACE] invalid reference type cast");
             }
@@ -851,7 +835,6 @@ bool TypeChecking::check(LiteralOrThis* literalOrThis) {
 }
 
 bool TypeChecking::check(Assignment* assignment) {
-    bool rv = true;
     if (assignment->isAssignName()) {
         Name* name = static_cast<AssignName*>(assignment)->getNameToAssign();
         
@@ -865,52 +848,13 @@ bool TypeChecking::check(Assignment* assignment) {
                 return false;
             }
 
-            CompilationTable* ct = NULL;
-            if (typeName == processing->getCanonicalName()) {
-                ct = processing;
-            } else if (typeName != "") {
-                std::vector<CompilationTable*>& types = packages[getQualifierFromString(typeName)];
-                for (unsigned int i = 0; i < types.size(); i++) {
-                    if (types[i]->getClassOrInterfaceName() == typeName.substr(typeName.find_last_of('.') + 1)) {
-                        ct = types[i];
-                        break;
-                    }
-                }
-            } else if (processing->getCanonicalName() == nextName->getFullName()) {
-                ct = processing;
-            } else if (processing->checkTypePresenceFromSingleImport(nextName->getFullName())) {
-                ct = processing->checkTypePresenceFromSingleImport(nextName->getFullName());
-            } else if (processing->checkTypePresenceInPackage(nextName->getFullName())) {
-                ct = processing->checkTypePresenceInPackage(nextName->getFullName());
-            } else if (processing->checkTypePresenceFromImportOnDemand(nextName->getFullName(), nextName->getNameId()->getToken())) {
-                ct = processing->checkTypePresenceFromImportOnDemand(nextName->getFullName(), nextName->getNameId()->getToken());
-            } else {
-                typeName = nextName->getFullName();
-                std::vector<CompilationTable*>& types = packages[getQualifierFromString(typeName)];
-                for (unsigned int i = 0; i < types.size(); i++) {
-                    if (types[i]->getClassOrInterfaceName() == typeName.substr(typeName.find_last_of('.') + 1)) {
-                        ct = types[i];
-                        break;
-                    }
-                }
-            }
-
-            ct = ct->getAField(name->getNameId()->getIdAsString())->getDeclaringClass();
-            FieldDecl* fd = ct->getAField(name->getNameId()->getIdAsString())->getField();
-            if (fd->isProtected() &&
-                (processing->getPackageName() != ct->getPackageName() &&
-                 !inheritsOrExtendsOrImplements(processing->getCanonicalName(), ct->getCanonicalName()))) {
-                Error(E_DEFAULT, NULL, "[DEV NOTE - REPLACE] Field access to protected thing - assignment.");
-                return false;
-            }
+            // No other field decl can be declared final lol...
         }
-    } else if (assignment->isAssignField()) {
-        rv = check(static_cast<AssignField*>(assignment)->getAssignedField());
     }
 
     std::string lhs_type = assignment->getExpressionTypeString();
     if (assignmentCheck(lhs_type, assignment->getExpressionToAssign())) {
-        return check(assignment->getExpressionToAssign()) && rv;
+        return (/*check(assignment) && */check(assignment->getExpressionToAssign()));
     }
     
     // for now it isn't worth the effort to try to get the token...
