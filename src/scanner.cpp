@@ -42,6 +42,7 @@ int Scanner::Scan(std::ifstream& file, std::vector<Token*> *tokens)
     std::vector<int> errorFlags(numDfas, 0);
     std::pair<DFA_STATES, TOKEN_TYPE> result;
     bool escapeSequence = false;
+    bool doneSequence = false;
 
     //Values for the token currently being scanned
     TOKEN_TYPE type = TT_INVALID;
@@ -82,6 +83,15 @@ int Scanner::Scan(std::ifstream& file, std::vector<Token*> *tokens)
             if (errorFlags[i] == 0) {
                 result = dfas[i]->transition((char)c);
                 switch (result.first) {
+                    case DS_ESCAPESINGLE:
+                    case DS_ESCAPEDOUBLE:
+                        escapeSequence = true;
+                        break;
+                    case DS_ENCLOSESINGLE:
+                    case DS_DOUBLEQUOTE:
+                        doneSequence = true;
+                        lexime += CharStringLiteralDfa::replacement;
+                        break;
                     case DS_ACCEPT:
                         type = result.second;
                         break;
@@ -142,8 +152,12 @@ int Scanner::Scan(std::ifstream& file, std::vector<Token*> *tokens)
         } else {
             if(!escapeSequence){
                 lexime += (char)c;
-                c = -2;
             }
+            if(doneSequence == true){
+                escapeSequence = false;
+                doneSequence = false;
+            }
+            c = -2;
         }
     }
 
